@@ -61,14 +61,7 @@ def handle_approve_delivery_view(ack, client, view, logger: Logger):
                 })
                 logger.info(f"Successfully updated Salesforce order for delivery {delivery_id}")
             else:
-                # Create new order if none exists
-                new_order = sf.Order.create({
-                    'OrderNumber': delivery_number,
-                    'Status': 'Delivered',
-                    'Description': delivery_notes,
-                    'Shipping_Location__c': delivery_location
-                })
-                logger.info(f"Created new Salesforce order for delivery {delivery_id} with ID: {new_order['id']}")
+                logger.warning(f"No Salesforce order found for delivery {delivery_id}")
 
         except Exception as sf_error:
             logger.error(f"Salesforce update failed for order {delivery_id}: {sf_error}")
