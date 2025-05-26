@@ -40,6 +40,40 @@ def handle_approve_delivery_view(ack, client, view, logger: Logger):
         # Extract just the numeric portion from delivery_id
         delivery_number = ''.join(filter(str.isdigit, delivery_id))
 
+        # Update Salesforce order object
+        try:
+            from simple_salesforce import Salesforce
+
+            sf = Salesforce(
+                username=os.environ.get('SF_USERNAME'),
+                password=os.environ.get('SF_PASSWORD'), 
+                security_token=os.environ.get('SF_TOKEN')
+            )
+
+            # Assuming delivery_id maps to Salesforce Order number
+            order = sf.query(f"SELECT Id FROM Order WHERE OrderNumber = '{delivery_number}'")
+            if order['records']:
+                order_id = order['records'][0]['Id']
+                sf.Order.update(order_id, {
+                    'Status': 'Delivered',
+                    'Description': delivery_notes,
+                    'Shipping_Location__c': delivery_location  
+                })
+                logger.info(f"Successfully updated Salesforce order for delivery {delivery_id}")
+            else:
+                # Create new order if none exists
+                new_order = sf.Order.create({
+                    'OrderNumber': delivery_number,
+                    'Status': 'Delivered',
+                    'Description': delivery_notes,
+                    'Shipping_Location__c': delivery_location
+                })
+                logger.info(f"Created new Salesforce order for delivery {delivery_id} with ID: {new_order['id']}")
+
+        except Exception as sf_error:
+            logger.error(f"Salesforce update failed for order {delivery_id}: {sf_error}")
+            # Continue execution even if Salesforce update fails
+
 
     except Exception as e:
         logger.error(f"Error in approve_delivery_view: {e}")
